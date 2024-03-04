@@ -22,12 +22,17 @@ public class ReaderServerThread extends Thread {
             String receivedMessage;
             try {
                 receivedMessage = reader.readLine();
-                socket.getInetAddress();
             } catch (IOException e) {
                 continue;
             }
-            if (receivedMessage != null) {
-                System.out.println(receivedMessage);
+            if (receivedMessage == null) {
+                continue;
+            }
+            String[] message = receivedMessage.split(",");
+            String event = message[0];
+            String player = message[1];
+            if (event.equals("REGISTER")) {
+                server.addPlayer(socket, player);
             }
             for (Socket s : server.getSockets()) {
                 if (s.isClosed()) {
