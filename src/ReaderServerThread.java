@@ -3,6 +3,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
+import java.util.List;
 
 public class ReaderServerThread extends Thread {
 
@@ -32,7 +33,31 @@ public class ReaderServerThread extends Thread {
             String event = message[0];
             String player = message[1];
             if (event.equals("REGISTER")) {
+                // check for om navnet er optaget.
+                List<String> playerNames = server.getPlayers().stream().map(Player::getName).toList();
+                if (playerNames.contains(player)) {
+                    //TODO: name is taken
+                    try {
+                        DataOutputStream writer = null;
+                        writer = new DataOutputStream(socket.getOutputStream());
+                        writer.writeBytes("Name is taken");
+                        writer.flush();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    } finally {
+                        try {
+                            socket.close();
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }
+
                 server.addPlayer(socket, player);
+                System.out.println("Player " + player + " has joined the game");
+            }
+            if (event.equals("MOVE")) {
+
             }
             for (Socket s : server.getSockets()) {
                 if (s.isClosed()) {

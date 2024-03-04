@@ -41,6 +41,10 @@ public class Server extends Thread {
         return players.keySet();
     }
 
+    public Collection<Player> getPlayers() {
+        return players.values();
+    }
+
     public void removePlayer(Socket socket) {
         players.remove(socket);
     }
