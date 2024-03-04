@@ -52,13 +52,10 @@ public class ReaderServerThread extends Thread {
                         }
                     }
                 }
-
                 server.addPlayer(socket, player);
                 System.out.println("Player " + player + " has joined the game");
             }
-            if (event.equals("MOVE")) {
-
-            }
+            
             for (Socket s : server.getSockets()) {
                 if (s.isClosed()) {
                     //TODO: remove player from game
@@ -69,6 +66,7 @@ public class ReaderServerThread extends Thread {
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
+
                     //writer.writeBytes(nameServiceClient.getUser(socket) + ": " + receivedMessage + '\n');
                     server.removePlayer(s);
                     continue;
