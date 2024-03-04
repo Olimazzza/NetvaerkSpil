@@ -1,3 +1,5 @@
+import java.io.*;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,6 +15,11 @@ import javafx.scene.text.*;
 
 public class GUI extends Application {
 
+	private Socket clientSocket;
+	private DataOutputStream outToServer;
+	private BufferedReader inFromServer;
+
+	//-----------------------------------------------------------------------------
 	public static final int size = 20;
 	public static final int scene_height = size * 20 + 100;
 	public static final int scene_width = size * 20 + 200;
@@ -50,6 +57,7 @@ public class GUI extends Application {
 	};
 
 
+
 	// -------------------------------------------
 	// | Maze: (0,0)              | Score: (1,0) |
 	// |-----------------------------------------|
@@ -60,6 +68,17 @@ public class GUI extends Application {
 	@Override
 	public void start(Stage primaryStage) {
 		try {
+
+			clientSocket = new Socket("172.31.80.1", 6788);
+			outToServer = new DataOutputStream(clientSocket.getOutputStream());
+			inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+
+			// Send registration message
+			String registrationMessage = createRegistrationMessage(); // Implement message creation
+			outToServer.writeBytes(registrationMessage + "\n");
+
+			new Thread(() -> receiveMessages()).start();
+
 			GridPane grid = new GridPane();
 			grid.setHgap(10);
 			grid.setVgap(10);
@@ -196,7 +215,6 @@ public class GUI extends Application {
 		return b.toString();
 	}
 
-
 	public Player getPlayerAt(int x, int y) {
 		for (Player p : players) {
 			if (p.getXpos() == x && p.getYpos() == y) {
@@ -205,5 +223,29 @@ public class GUI extends Application {
 		}
 		return null;
 	}
-}
 
+	private String createRegistrationMessage() {
+		String message = "REGISTER," + me.name + "," + me.getXpos() + "," + me.getYpos();
+		return message;
+	}
+
+	private void receiveMessages() {
+		try {
+			while (true) {
+				String message = inFromServer.readLine();
+				// Process received message (movement, scores, etc.)
+				// Update game state and visuals
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(1); // Exit the application on communication error
+		} finally {
+			cleanup();
+		}
+	}
+
+	private void cleanup() {
+		// Close connections and resources
+	}
+
+}
