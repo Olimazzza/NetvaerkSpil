@@ -33,6 +33,7 @@ public class ReaderServerThread extends Thread {
             String player = message[1];
             if (event.equals("REGISTER")) {
                 server.addPlayer(socket, player);
+                System.out.println("Player " + player + " has joined the game");
             }
             for (Socket s : server.getSockets()) {
                 if (s.isClosed()) {
@@ -44,6 +45,7 @@ public class ReaderServerThread extends Thread {
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
+
                     //writer.writeBytes(nameServiceClient.getUser(socket) + ": " + receivedMessage + '\n');
                     server.removePlayer(s);
                     continue;
