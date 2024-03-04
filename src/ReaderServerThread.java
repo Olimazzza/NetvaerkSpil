@@ -30,6 +30,15 @@ public class ReaderServerThread extends Thread {
             for (Socket s : server.getSockets()) {
                 if (s.isClosed()) {
                     //TODO: remove player from game
+                    //send a message to other clients here
+                    DataOutputStream writer = null;
+                    try {
+                        writer = new DataOutputStream(s.getOutputStream());
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                    //writer.writeBytes(nameServiceClient.getUser(socket) + ": " + receivedMessage + '\n');
+                    server.removePlayer(s);
                     continue;
                 }
                 if (s != socket) {
@@ -37,7 +46,7 @@ public class ReaderServerThread extends Thread {
                     try {
                         writer = new DataOutputStream(s.getOutputStream());
                         //send a message to other clients here
-                        //writer.writeBytes(nameServiceClient.getUser(socket) + ": " + receivedMessage + '\n');
+                        writer.writeBytes("Jeg modtog din besked, og sendte dem rundt");
                         writer.flush();
                     } catch (IOException e) {
                         throw new RuntimeException(e);
