@@ -158,6 +158,8 @@ public class GUI extends Application {
 			fields[9][4].setGraphic(new ImageView(hero_up));
 
 			Player harry = new Player("Harry", 14, 15, "up");
+
+
 			players.add(harry);
 			fields[14][15].setGraphic(new ImageView(hero_up));
 
@@ -205,6 +207,15 @@ public class GUI extends Application {
 				me.setXpos(x);
 				me.setYpos(y);
 			}
+		}
+		try {
+			// Send movement update to server
+			outToServer.writeBytes("MOVE," + me.getName() +","+ me.getXpos() + "," + me.getYpos() + "," + direction + "\n");
+			outToServer.flush();
+		} catch (IOException e) {
+			// Handle communication error (e.g., print error message, disconnect)
+			System.err.println("Error sending movement update: " + e.getMessage());
+			// You may also consider disconnecting from the server or retrying the operation
 		}
 		scoreList.setText(getScoreList());
 	}

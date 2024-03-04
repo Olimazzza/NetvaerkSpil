@@ -32,6 +32,16 @@ public class ReaderServerThread extends Thread {
             String[] message = receivedMessage.split(",");
             String event = message[0];
             String player = message[1];
+
+            if(event.equals("MOVE")){
+                int x = Integer.parseInt(message[2]);
+                int y = Integer.parseInt(message[3]);
+
+                String direction = message[4];
+
+                System.out.println("Player " + player + " moved to " + x + ", " + y + " in direction " + direction);
+            }
+
             if (event.equals("REGISTER")) {
                 // check for om navnet er optaget.
                 List<String> playerNames = server.getPlayers().stream().map(Player::getName).toList();
