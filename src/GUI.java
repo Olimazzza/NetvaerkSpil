@@ -16,7 +16,6 @@ public class GUI extends Application {
 	public static final int size = 20;
 	public static final int scene_height = size * 20 + 100;
 	public static final int scene_width = size * 20 + 200;
-
 	public static Image image_floor;
 	public static Image image_wall;
 	public static Image hero_right, hero_left, hero_up, hero_down;
