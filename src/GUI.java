@@ -69,7 +69,7 @@ public class GUI extends Application {
 	public void start(Stage primaryStage) {
 		try {
 
-			clientSocket = new Socket("172.31.80.1", 6788);
+			clientSocket = new Socket("10.10.138.167", 6788);
 			outToServer = new DataOutputStream(clientSocket.getOutputStream());
 			inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 			me = new Player("Orville", 9, 4, "up");
