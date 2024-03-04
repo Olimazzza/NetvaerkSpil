@@ -231,6 +231,14 @@ public class GUI extends Application {
 		return message;
 	}
 
+	private void sendMessageToServer(String message) {
+		try {
+			outToServer.writeBytes(message + "\n");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
 	private void receiveMessages() {
 		try {
 			while (true) {
