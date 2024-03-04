@@ -1,7 +1,7 @@
 public class RunServer {
 
     public static void main(String[] args) {
-        Server server = new Server(12);
+        Server server = new Server(6788);
         server.start();
     }
 }

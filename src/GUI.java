@@ -72,10 +72,13 @@ public class GUI extends Application {
 			clientSocket = new Socket("172.31.80.1", 6788);
 			outToServer = new DataOutputStream(clientSocket.getOutputStream());
 			inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+			me = new Player("Orville", 9, 4, "up");
 
 			// Send registration message
 			String registrationMessage = createRegistrationMessage(); // Implement message creation
+			System.out.println(registrationMessage);
 			outToServer.writeBytes(registrationMessage + "\n");
+			outToServer.flush();
 
 			new Thread(() -> receiveMessages()).start();
 
@@ -151,7 +154,6 @@ public class GUI extends Application {
 
 			// Setting up standard players
 
-			me = new Player("Orville", 9, 4, "up");
 			players.add(me);
 			fields[9][4].setGraphic(new ImageView(hero_up));
 

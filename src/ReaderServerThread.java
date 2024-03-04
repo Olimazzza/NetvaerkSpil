@@ -22,11 +22,13 @@ public class ReaderServerThread extends Thread {
             String receivedMessage;
             try {
                 receivedMessage = reader.readLine();
+                socket.getInetAddress();
             } catch (IOException e) {
                 continue;
             }
-
-
+            if (receivedMessage != null) {
+                System.out.println(receivedMessage);
+            }
             for (Socket s : server.getSockets()) {
                 if (s.isClosed()) {
                     //TODO: remove player from game

@@ -26,8 +26,10 @@ public class Server extends Thread {
             try {
                 Socket connection = serverSocket.accept();
                 if (connection.isConnected()) {
+                    System.out.println(connection);
                     ReaderServerThread readerThread = new ReaderServerThread(connection, this);
-                    Writer writerThread;
+
+                    readerThread.start();
                 }
             } catch (Exception e) {
                 e.printStackTrace();
