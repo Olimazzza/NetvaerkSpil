@@ -7,6 +7,8 @@ import java.util.*;
 
 public class Server extends Thread {
 
+    // martin's ip: 172.31.80.1
+
     private final Map<Socket, Player> players = new HashMap<>();
     private ServerSocket serverSocket;
 
@@ -33,11 +35,15 @@ public class Server extends Thread {
         }
     }
 
-    public void addPlayer(Socket socket) {
-        players.put(socket, new Player("test", 1, 1, "UP"));
-    }
-
     public Set<Socket> getSockets() {
         return players.keySet();
+    }
+
+    public void removePlayer(Socket socket) {
+        players.remove(socket);
+    }
+
+    public void addPlayer(Socket socket) {
+        players.put(socket, new Player("test", 1, 1, "UP"));
     }
 }
