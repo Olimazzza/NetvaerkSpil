@@ -5,6 +5,8 @@ import java.util.List;
 
 import javafx.application.Application;
 import javafx.geometry.Insets;
+import javafx.stage.Modality;
+import javafx.stage.PopupWindow;
 import javafx.stage.Stage;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -12,6 +14,7 @@ import javafx.scene.image.*;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.text.*;
+import javafx.stage.StageStyle;
 
 public class GUI extends Application {
 
@@ -69,10 +72,13 @@ public class GUI extends Application {
 	public void start(Stage primaryStage) {
 		try {
 
-			clientSocket = new Socket("10.10.138.170", 6788);
+			clientSocket = new Socket("localhost", 6788);
 			outToServer = new DataOutputStream(clientSocket.getOutputStream());
 			inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 			me = new Player("Orville", 9, 4, "up");
+
+			// Insert your username here
+			showPreGameDialog();
 
 			// Send registration message
 			String registrationMessage = createRegistrationMessage(); // Implement message creation
@@ -167,6 +173,44 @@ public class GUI extends Application {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+	}
+
+	private void showPreGameDialog() {
+		Dialog usernameDialog = new Dialog();
+		GridPane gridDialog = new GridPane();
+		gridDialog.setHgap(10);
+		gridDialog.setVgap(10);
+		gridDialog.setAlignment(javafx.geometry.Pos.CENTER);
+
+		TextField usernameField = new TextField();
+		usernameField.setPromptText("Username");
+		gridDialog.add(usernameField, 0, 0);
+		Button okButton = new Button("OK");
+		okButton.setDefaultButton(true);
+		okButton.setPrefSize(40, 20);
+		gridDialog.add(okButton, 0, 1);
+
+		Stage preStage = new Stage();
+		Scene usernameScene = new Scene(gridDialog, 300, 300);
+		preStage.setScene(usernameScene);
+
+		okButton.setOnAction(e -> {
+			// send request for username registration
+			me.name = usernameField.getText();
+			usernameDialog.close();
+			preStage.close();
+		});
+
+        preStage.onCloseRequestProperty().addListener(e -> {
+			System.out.println("Shutting down for game...");
+			cleanup();
+		});
+
+		preStage.setTitle("Insert your player name");
+		preStage.initModality(Modality.APPLICATION_MODAL);
+		preStage.initStyle(StageStyle.UTILITY);
+
+		preStage.showAndWait();
 	}
 
 	public void playerMoved(int delta_x, int delta_y, String direction) {
