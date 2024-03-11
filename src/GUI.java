@@ -76,14 +76,16 @@ public class GUI extends Application {
 			inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 			me = new Player("Orville", 9, 4, "up");
 
+			// register all active players
+			sendMessageToServer("REGISTER_ALL_PLAYERS");
+
 			// Insert your username here
 			showPreGameDialog();
 
 			// Send registration message
 			String registrationMessage = createRegistrationMessage(); // Implement message creation
 			System.out.println(registrationMessage);
-			outToServer.writeBytes(registrationMessage + "\n");
-			outToServer.flush();
+			sendMessageToServer(registrationMessage); // Implement message sending
 
 			new Thread(() -> receiveMessages()).start();
 
@@ -140,16 +142,16 @@ public class GUI extends Application {
 
 			scene.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
 				switch (event.getCode()) {
-					case UP:
+					case UP, W:
 						playerMoved(0, -1, "up");
 						break;
-					case DOWN:
+					case DOWN, S:
 						playerMoved(0, +1, "down");
 						break;
-					case LEFT:
+					case LEFT, A:
 						playerMoved(-1, 0, "left");
 						break;
-					case RIGHT:
+					case RIGHT, D:
 						playerMoved(+1, 0, "right");
 						break;
 					default:
@@ -161,12 +163,6 @@ public class GUI extends Application {
 
 			players.add(me);
 			fields[9][4].setGraphic(new ImageView(hero_up));
-
-			Player harry = new Player("Harry", 14, 15, "up");
-
-
-			players.add(harry);
-			fields[14][15].setGraphic(new ImageView(hero_up));
 
 			scoreList.setText(getScoreList());
 		} catch (Exception e) {
@@ -252,16 +248,9 @@ public class GUI extends Application {
 				me.setYpos(y);
 			}
 		}
-		try {
-			// Send movement update to server
-			outToServer.writeBytes("MOVE," + me.getName() +","+ me.getXpos() + "," + me.getYpos() + "," + direction + "\n");
-			outToServer.flush();
-		} catch (IOException e) {
-			// Handle communication error (e.g., print error message, disconnect)
-			System.err.println("Error sending movement update: " + e.getMessage());
-			// You may also consider disconnecting from the server or retrying the operation
-		}
-		scoreList.setText(getScoreList());
+        // Send movement update to server
+        sendMessageToServer("MOVE," + me.getName() + "," + me.getXpos() + "," + me.getYpos() + "," + direction);
+        scoreList.setText(getScoreList());
 	}
 
 	public String getScoreList() {
@@ -300,6 +289,19 @@ public class GUI extends Application {
 				String message = inFromServer.readLine();
 				// Process received message (movement, scores, etc.)
 				// Update game state and visuals
+
+				String[] messageParts = message.split(",");
+                String event = messageParts[0];
+
+                if (event.equals("REGISTER")) {
+					System.out.println("Received registration message: " + message);
+                    String playerName = messageParts[1];
+                    int x = Integer.parseInt(messageParts[2]);
+                    int y = Integer.parseInt(messageParts[3]);
+                    String direction = messageParts.length > 4 ? messageParts[4] : "up";
+                    players.add(new Player(playerName, x, y, direction));
+                }
+
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
