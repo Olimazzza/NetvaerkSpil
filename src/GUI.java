@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -287,21 +288,9 @@ public class GUI extends Application {
 		try {
 			while (true) {
 				String message = inFromServer.readLine();
-				// Process received message (movement, scores, etc.)
-				// Update game state and visuals
-
-				String[] messageParts = message.split(",");
-                String event = messageParts[0];
-
-                if (event.equals("REGISTER")) {
-					System.out.println("Received registration message: " + message);
-                    String playerName = messageParts[1];
-                    int x = Integer.parseInt(messageParts[2]);
-                    int y = Integer.parseInt(messageParts[3]);
-                    String direction = messageParts.length > 4 ? messageParts[4] : "up";
-                    players.add(new Player(playerName, x, y, direction));
-                }
-
+				if (message != null) {
+					processServerMessage(message);
+				}
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -311,8 +300,78 @@ public class GUI extends Application {
 		}
 	}
 
+	private void processServerMessage(String message) {
+		Platform.runLater(() -> {
+			String[] messageParts = message.split(",");
+			String event = messageParts[0];
+
+			switch (event) {
+				case "REGISTER":
+					handleRegisterMessage(messageParts);
+					break;
+				case "MOVE":
+					handleMoveMessage(messageParts);
+					break;
+				default:
+					break;
+			}
+		});
+	}
+
+	private void handleRegisterMessage(String[] messageParts) {
+		String playerName = messageParts[1];
+		int x = Integer.parseInt(messageParts[2]);
+		int y = Integer.parseInt(messageParts[3]);
+		String direction = messageParts.length > 4 ? messageParts[4] : "up";
+		Player newPlayer = new Player(playerName, x, y, direction);
+		players.add(newPlayer);
+		updatePlayerOnGUI(newPlayer);
+	}
+
+	private void handleMoveMessage(String[] messageParts) {
+		String playerName = messageParts[1];
+		int x = Integer.parseInt(messageParts[2]);
+		int y = Integer.parseInt(messageParts[3]);
+		String direction = messageParts.length > 4 ? messageParts[4] : "up";
+		Player playerToUpdate = getPlayerByName(playerName);
+		if (playerToUpdate != null) {
+			playerToUpdate.setXpos(x);
+			playerToUpdate.setYpos(y);
+			playerToUpdate.setDirection(direction);
+			updatePlayerOnGUI(playerToUpdate);
+		}
+	}
+
+	private Player getPlayerByName(String name) {
+		for (Player p : players) {
+			if (p.getName().equals(name)) {
+				return p;
+			}
+		}
+		return null;
+	}
+
+	private void updatePlayerOnGUI(Player player) {
+		Platform.runLater(() -> {
+			int x = player.getXpos();
+			int y = player.getYpos();
+			String direction = player.getDirection();
+			if (direction.equals("right")) {
+				fields[x][y].setGraphic(new ImageView(hero_right));
+			}
+			if (direction.equals("left")) {
+				fields[x][y].setGraphic(new ImageView(hero_left));
+			}
+			if (direction.equals("up")) {
+				fields[x][y].setGraphic(new ImageView(hero_up));
+			}
+			if (direction.equals("down")) {
+				fields[x][y].setGraphic(new ImageView(hero_down));
+			}
+		});
+	}
+
 	private void cleanup() {
 		// Close connections and resources
 	}
-
 }

@@ -17,28 +17,25 @@ public class ReaderServerThread extends Thread {
         this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     }
 
-    private void sendToAll(String message, boolean ignoreSelf) {
+    private void sendToAll(String message) {
         for (Socket s : server.getSockets()) {
-            if (ignoreSelf && s == socket) {
-                continue;
-            }
             sendToSocket(s, message);
         }
     }
 
     private void sendToSocket(Socket s, String message) {
         if (s.isClosed()) {
-            System.out.println("Socket " + s + " is closed or not connected");
             server.removePlayer(s);
-            return;
         }
-        DataOutputStream writer = null;
-        try {
-            writer = new DataOutputStream(s.getOutputStream());
-            writer.writeBytes(message + '\n');
-            writer.flush();
-        } catch (IOException e) {
-            System.out.println("Failed to send message to socket " + s);
+        if (s != socket) {
+            DataOutputStream writer = null;
+            try {
+                writer = new DataOutputStream(s.getOutputStream());
+                writer.writeBytes(message);
+                writer.flush();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
@@ -65,28 +62,36 @@ public class ReaderServerThread extends Thread {
                 String direction = message[4];
 
                 System.out.println("Player " + player + " moved to " + x + ", " + y + " in direction " + direction);
-                System.out.println(receivedMessage);
-                System.out.println("Sending to all players");
-                System.out.println(server.getPlayers());
-                sendToAll(receivedMessage, false);
             }
 
-            else if (event.equals("REGISTER_ALL_PLAYERS")) {
+            if (event.equals("REGISTER_ALL_PLAYERS")) {
                 for (Player p : server.getPlayers()) {
                     sendToSocket(socket, "REGISTER," + p.getName() + "," + p.getXpos() + "," + p.getYpos() + "," + p.getDirection() + '\n');
                 }
             }
 
-            else if (event.equals("REGISTER")) {
+            if (event.equals("REGISTER")) {
                 // check for om navnet er optaget.
                 List<String> playerNames = server.getPlayers().stream().map(Player::getName).toList();
                 if (playerNames.contains(player)) {
-                    sendToSocket(socket, "NAME_TAKEN");
-                } else {
-                    System.out.println("Player " + player + " has joined the game");
-                    server.addPlayer(socket, player);
-                    sendToAll(receivedMessage, false); // send to all and yourself
+                    //TODO: name is taken
+                    try {
+                        DataOutputStream writer = null;
+                        writer = new DataOutputStream(socket.getOutputStream());
+                        writer.writeBytes("Name is taken");
+                        writer.flush();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    } finally {
+                        try {
+                            socket.close();
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
                 }
+                server.addPlayer(socket, player);
+                System.out.println("Player " + player + " has joined the game");
             }
         }
     }

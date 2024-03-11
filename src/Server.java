@@ -22,11 +22,10 @@ public class Server extends Thread {
     public void run() {
         while (true) {
             try {
-                    Socket connection = serverSocket.accept();
+                Socket connection = serverSocket.accept();
                 if (connection.isConnected()) {
                     System.out.println(connection);
                     ReaderServerThread readerThread = new ReaderServerThread(connection, this);
-
                     readerThread.start();
                 }
             } catch (Exception e) {
@@ -52,6 +51,11 @@ public class Server extends Thread {
         int x = random.nextInt(20);
         int y = random.nextInt(20);
 
-        players.put(socket, new Player(playerName, x, y, "UP"));
+        Player newPlayer = new Player(playerName, x, y, "UP");
+        players.put(socket, newPlayer);
+
+        for (Player p : players.values()){
+
+        }
     }
 }
