@@ -7,8 +7,6 @@ import java.util.*;
 
 public class Server extends Thread {
 
-    // martin's ip: 172.31.80.1
-
     private final Map<Socket, Player> players = new HashMap<>();
     private ServerSocket serverSocket;
 
@@ -24,7 +22,7 @@ public class Server extends Thread {
     public void run() {
         while (true) {
             try {
-                Socket connection = serverSocket.accept();
+                    Socket connection = serverSocket.accept();
                 if (connection.isConnected()) {
                     System.out.println(connection);
                     ReaderServerThread readerThread = new ReaderServerThread(connection, this);

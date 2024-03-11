@@ -6,7 +6,6 @@ import java.util.List;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.stage.Modality;
-import javafx.stage.PopupWindow;
 import javafx.stage.Stage;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -72,7 +71,7 @@ public class GUI extends Application {
 	public void start(Stage primaryStage) {
 		try {
 
-			clientSocket = new Socket("localhost", 6788);
+			clientSocket = new Socket("10.10.138.107", 6750);
 			outToServer = new DataOutputStream(clientSocket.getOutputStream());
 			inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 			me = new Player("Orville", 9, 4, "up");
@@ -201,7 +200,7 @@ public class GUI extends Application {
 			preStage.close();
 		});
 
-        preStage.onCloseRequestProperty().addListener(e -> {
+		preStage.onCloseRequestProperty().addListener(e -> {
 			System.out.println("Shutting down for game...");
 			cleanup();
 		});
@@ -212,6 +211,7 @@ public class GUI extends Application {
 
 		preStage.showAndWait();
 	}
+
 
 	public void playerMoved(int delta_x, int delta_y, String direction) {
 		me.direction = direction;
