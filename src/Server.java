@@ -54,7 +54,7 @@ public class Server extends Thread {
         Player newPlayer = new Player(playerName, x, y, "UP");
         players.put(socket, newPlayer);
 
-        for (Player p : players.values()){
+        for (Player p : players.values()) {
 
         }
     }

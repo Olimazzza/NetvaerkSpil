@@ -2,6 +2,7 @@ import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -72,10 +73,14 @@ public class GUI extends Application {
 	public void start(Stage primaryStage) {
 		try {
 
-			clientSocket = new Socket("10.10.138.107", 6750);
+			clientSocket = new Socket("192.168.56.1", 6750);
 			outToServer = new DataOutputStream(clientSocket.getOutputStream());
 			inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-			me = new Player("Orville", 9, 4, "up");
+
+			Random random = new Random();
+			int initialX = random.nextInt(20);
+			int initialY = random.nextInt(20);
+			me = new Player("Player", initialX, initialY, "up");
 
 			// register all active players
 			sendMessageToServer("REGISTER_ALL_PLAYERS");
@@ -163,7 +168,7 @@ public class GUI extends Application {
 			// Setting up standard players
 
 			players.add(me);
-			fields[9][4].setGraphic(new ImageView(hero_up));
+			fields[initialX][initialY].setGraphic(new ImageView(hero_up));
 
 			scoreList.setText(getScoreList());
 		} catch (Exception e) {
@@ -213,6 +218,7 @@ public class GUI extends Application {
 	public void playerMoved(int delta_x, int delta_y, String direction) {
 		me.direction = direction;
 		int x = me.getXpos(), y = me.getYpos();
+		fields[x][y].setGraphic(new ImageView(image_floor));
 
 		if (board[y + delta_y].charAt(x + delta_x) == 'w') {
 			me.addPoints(-1);
@@ -249,9 +255,9 @@ public class GUI extends Application {
 				me.setYpos(y);
 			}
 		}
-        // Send movement update to server
-        sendMessageToServer("MOVE," + me.getName() + "," + me.getXpos() + "," + me.getYpos() + "," + direction);
-        scoreList.setText(getScoreList());
+		sendMessageToServer("MOVE," + me.getName() + "," + me.getXpos() + "," + me.getYpos() + "," + direction);
+
+		scoreList.setText(getScoreList());
 	}
 
 	public String getScoreList() {
@@ -323,9 +329,21 @@ public class GUI extends Application {
 		int x = Integer.parseInt(messageParts[2]);
 		int y = Integer.parseInt(messageParts[3]);
 		String direction = messageParts.length > 4 ? messageParts[4] : "up";
-		Player newPlayer = new Player(playerName, x, y, direction);
-		players.add(newPlayer);
-		updatePlayerOnGUI(newPlayer);
+
+
+		Player existingPlayer = getPlayerByName(playerName);
+		if (existingPlayer != null) {
+			existingPlayer.setXpos(x);
+			existingPlayer.setYpos(y);
+			existingPlayer.setDirection(direction);
+			updatePlayerOnGUI(existingPlayer);
+		}
+		else {
+			// Player doesn't exist, create a new player and add it to the list
+			Player newPlayer = new Player(playerName, x, y, direction);
+			players.add(newPlayer);
+			updatePlayerOnGUI(newPlayer);
+		}
 	}
 
 	private void handleMoveMessage(String[] messageParts) {
@@ -335,6 +353,11 @@ public class GUI extends Application {
 		String direction = messageParts.length > 4 ? messageParts[4] : "up";
 		Player playerToUpdate = getPlayerByName(playerName);
 		if (playerToUpdate != null) {
+			int oldX = playerToUpdate.getXpos();
+			int oldY = playerToUpdate.getYpos();
+
+			fields[oldX][oldY].setGraphic(new ImageView(image_floor));
+
 			playerToUpdate.setXpos(x);
 			playerToUpdate.setYpos(y);
 			playerToUpdate.setDirection(direction);
