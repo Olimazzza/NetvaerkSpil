@@ -1,4 +1,5 @@
 import java.io.Serializable;
+import java.util.List;
 
 public class Player implements Serializable {
 	String name;
@@ -40,6 +41,26 @@ public class Player implements Serializable {
 	public void addPoints(int p) {
 		point+=p;
 	}
+
+	public static int[] spawnRandomLocation(String[] map, List<Player> players) {
+		int xpos;
+		int ypos;
+		do {
+			xpos = (int) (Math.random() * 20);
+			ypos = (int) (Math.random() * 20);
+		} while (map[xpos].charAt(ypos) == 'w' && isAPlayerAtThisLocation(players, xpos, ypos));
+		return new int[] {xpos, ypos};
+	}
+
+	private static boolean isAPlayerAtThisLocation(List<Player> players, int xpos, int ypos) {
+		for (Player p : players) {
+			if (p.getXpos() == xpos && p.getYpos() == ypos) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public String toString() {
 		return name+":   "+point;
 	}

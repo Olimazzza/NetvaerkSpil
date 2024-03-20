@@ -10,6 +10,11 @@ public class Server extends Thread {
     private final Map<Socket, Player> players = new HashMap<>();
     private ServerSocket serverSocket;
 
+    public static void main(String[] args) {
+        Server server = new Server(6750);
+        server.start();
+    }
+
     public Server(int port) {
         try {
             serverSocket = new ServerSocket(port);
@@ -34,6 +39,10 @@ public class Server extends Thread {
         }
     }
 
+    public Map<Socket, Player> getSocketsAndPlayers() {
+        return players;
+    }
+
     public Set<Socket> getSockets() {
         return players.keySet();
     }
@@ -46,16 +55,18 @@ public class Server extends Thread {
         players.remove(socket);
     }
 
-    public void addPlayer(Socket socket, String playerName) {
-        Random random = new Random();
-        int x = random.nextInt(20);
-        int y = random.nextInt(20);
-
-        Player newPlayer = new Player(playerName, x, y, "UP");
+    public Player addPlayer(Socket socket, String playerName, int x, int y) {
+        Player newPlayer = new Player(playerName, x, y, "up");
         players.put(socket, newPlayer);
+        return newPlayer;
+    }
 
-        for (Player p : players.values()) {
-
+    public void removeSocketByPlayer(Player player) {
+        for (Socket s : players.keySet()) {
+            if (players.get(s).equals(player)) {
+                players.remove(s);
+                return;
+            }
         }
     }
 }

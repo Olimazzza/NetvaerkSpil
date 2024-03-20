@@ -1,12 +1,20 @@
+import java.awt.event.MouseEvent;
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.concurrent.Task;
+import javafx.concurrent.Worker;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseDragEvent;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.scene.Scene;
@@ -16,6 +24,8 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.text.*;
 import javafx.stage.StageStyle;
+
+import javax.security.auth.callback.Callback;
 
 public class GUI extends Application {
 
@@ -32,7 +42,7 @@ public class GUI extends Application {
 	public static Image hero_right, hero_left, hero_up, hero_down;
 
 	public static Player me;
-	public static List<Player> players = new ArrayList<Player>();
+	public static List<Player> players = new ArrayList<>();
 
 	private Label[][] fields;
 	private TextArea scoreList;
@@ -60,7 +70,14 @@ public class GUI extends Application {
 			"wwwwwwwwwwwwwwwwwwww"
 	};
 
+	private String hostname;
+	private int port;
 
+	@Override
+	public void init() {
+		this.hostname = "localhost";
+		this.port = 6750;
+	}
 
 	// -------------------------------------------
 	// | Maze: (0,0)              | Score: (1,0) |
@@ -73,27 +90,14 @@ public class GUI extends Application {
 	public void start(Stage primaryStage) {
 		try {
 
-			clientSocket = new Socket("192.168.56.1", 6750);
+			clientSocket = new Socket(hostname, port);
 			outToServer = new DataOutputStream(clientSocket.getOutputStream());
 			inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
-			Random random = new Random();
-			int initialX = random.nextInt(20);
-			int initialY = random.nextInt(20);
-			me = new Player("Player", initialX, initialY, "up");
+			me = new Player("Player", 0, 0, "up");
 
-			// register all active players
-			sendMessageToServer("REGISTER_ALL_PLAYERS");
-
-			// Insert your username here
+			// registration of the player is done in the pregame dialog
 			showPreGameDialog();
-
-			// Send registration message
-			String registrationMessage = createRegistrationMessage(); // Implement message creation
-			System.out.println(registrationMessage);
-			sendMessageToServer(registrationMessage); // Implement message sending
-
-			new Thread(() -> receiveMessages()).start();
 
 			GridPane grid = new GridPane();
 			grid.setHgap(10);
@@ -136,7 +140,6 @@ public class GUI extends Application {
 			}
 			scoreList.setEditable(false);
 
-
 			grid.add(mazeLabel, 0, 0);
 			grid.add(scoreLabel, 1, 0);
 			grid.add(boardGrid, 0, 1);
@@ -164,13 +167,24 @@ public class GUI extends Application {
 						break;
 				}
 			});
+			scene.setOnMouseClicked(new EventHandler<>() {
+				@Override
+				public void handle(javafx.scene.input.MouseEvent mouseEvent) {
+					if (mouseEvent.getButton() != MouseButton.PRIMARY) return;
+					System.out.println("shooting");
+				}
+			});
+			primaryStage.setTitle("Maze multiplayer game");
+			primaryStage.getIcons().add(image_floor);
+			primaryStage.setOnCloseRequest(e -> {
+				System.out.println("Shutting down for game...");
+				cleanup();
+			});
 
-			// Setting up standard players
-
+			// Setting up default player
 			players.add(me);
-			fields[initialX][initialY].setGraphic(new ImageView(hero_up));
-
-			scoreList.setText(getScoreList());
+			//fields[me.getXpos()][me.getYpos()].setGraphic(new ImageView(hero_up)); // Set the player on the board
+			updateScoreList();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -197,73 +211,78 @@ public class GUI extends Application {
 
 		okButton.setOnAction(e -> {
 			// send request for username registration
-			me.name = usernameField.getText();
-			usernameDialog.close();
-			preStage.close();
+			String name = usernameField.getText();
+			if (name.isEmpty()) {
+				Alert alert = new Alert(Alert.AlertType.ERROR);
+				alert.setTitle("Error");
+				alert.setHeaderText("Invalid username");
+				alert.setContentText("Please enter a valid username");
+				alert.showAndWait();
+			} else if (!nameIsAllowed(name)) {
+				Alert alert = new Alert(Alert.AlertType.ERROR);
+				alert.setTitle("Error");
+				alert.setHeaderText("Invalid username");
+				alert.setContentText("Username already taken");
+				alert.showAndWait();
+			} else {
+				me.name = name;
+				int[] coords = Player.spawnRandomLocation(board, players);
+				new Thread(this::receiveMessages).start(); // activate the listener
+				sendMessageToServer(createRegistrationMessage(name, coords[0], coords[1]));
+				sendMessageToServer("REGISTER_ALL_PLAYERS");
+				usernameDialog.close();
+				preStage.close();
+			}
 		});
 
-		preStage.onCloseRequestProperty().addListener(e -> {
-			System.out.println("Shutting down for game...");
+		preStage.setOnCloseRequest(e -> {
+			System.out.println("Did not enter a username");
 			cleanup();
 		});
 
 		preStage.setTitle("Insert your player name");
 		preStage.initModality(Modality.APPLICATION_MODAL);
-		preStage.initStyle(StageStyle.UTILITY);
 
 		preStage.showAndWait();
 	}
 
-
 	public void playerMoved(int delta_x, int delta_y, String direction) {
 		me.direction = direction;
 		int x = me.getXpos(), y = me.getYpos();
-		fields[x][y].setGraphic(new ImageView(image_floor));
+		//fields[x][y].setGraphic(new ImageView(image_floor));
 
+		String pointMessage = "";
 		if (board[y + delta_y].charAt(x + delta_x) == 'w') {
-			me.addPoints(-1);
+//			me.addPoints(-1);
+			pointMessage = "," + "-" + 1;
 		} else {
 			Player p = getPlayerAt(x + delta_x, y + delta_y);
 			if (p != null) {
-				me.addPoints(10);
-				p.addPoints(-10);
+//				me.addPoints(10);
+//				p.addPoints(-10);
+				pointMessage = "," + 10 + "," + p.name + "," + "-" + 10;
 			} else {
-				me.addPoints(1);
-
-				fields[x][y].setGraphic(new ImageView(image_floor));
+//				me.addPoints(1);
+				pointMessage = "," + 1;
 				x += delta_x;
 				y += delta_y;
-
-				if (direction.equals("right")) {
-					fields[x][y].setGraphic(new ImageView(hero_right));
-				}
-				;
-				if (direction.equals("left")) {
-					fields[x][y].setGraphic(new ImageView(hero_left));
-				}
-				;
-				if (direction.equals("up")) {
-					fields[x][y].setGraphic(new ImageView(hero_up));
-				}
-				;
-				if (direction.equals("down")) {
-					fields[x][y].setGraphic(new ImageView(hero_down));
-				}
-				;
-
-				me.setXpos(x);
-				me.setYpos(y);
 			}
 		}
-		sendMessageToServer("MOVE," + me.getName() + "," + me.getXpos() + "," + me.getYpos() + "," + direction);
+		sendMessageToServer("MOVE," + me.getName() + "," + x + "," + y + "," + direction + pointMessage);
+	}
 
+	private void updateScoreList() {
 		scoreList.setText(getScoreList());
 	}
 
 	public String getScoreList() {
 		StringBuffer b = new StringBuffer(100);
 		for (Player p : players) {
-			b.append(p + "\r\n");
+			if (p == me) {
+				b.append(p + " (you)\r\n");
+			} else {
+				b.append(p + "\r\n");
+			}
 		}
 		return b.toString();
 	}
@@ -277,9 +296,17 @@ public class GUI extends Application {
 		return null;
 	}
 
-	private String createRegistrationMessage() {
-		String message = "REGISTER," + me.name + "," + me.getXpos() + "," + me.getYpos();
+	private String createRegistrationMessage(String name, int x, int y) {
+		String message = "REGISTER," + name + "," + x + "," + y;
+//		String message = "REGISTER," + me.name + "," + me.getXpos() + "," + me.getYpos();
 		return message;
+	}
+
+	private boolean nameIsAllowed(String name) {
+		String message = "NAME_SEARCH," + name;
+		sendMessageToServer(message);
+		String response = receiveMessageFromServer();
+		return response.equals("NAME_AVAILABLE");
 	}
 
 	private void sendMessageToServer(String message) {
@@ -287,6 +314,15 @@ public class GUI extends Application {
 			outToServer.writeBytes(message + "\n");
 		} catch (IOException e) {
 			e.printStackTrace();
+		}
+	}
+
+	private String receiveMessageFromServer() {
+		try {
+			return inFromServer.readLine();
+		} catch (IOException e) {
+			e.printStackTrace();
+			return null;
 		}
 	}
 
@@ -299,7 +335,7 @@ public class GUI extends Application {
 				}
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
+			e.printStackTrace(); //TODO: disable this in production
 			System.exit(1); // Exit the application on communication error
 		} finally {
 			cleanup();
@@ -318,6 +354,12 @@ public class GUI extends Application {
 				case "MOVE":
 					handleMoveMessage(messageParts);
 					break;
+				case "DISCONNECT":
+					handleDisconnectMessage(messageParts);
+					break;
+				case "POINTS":
+					handlePointsMessage(messageParts);
+					break;
 				default:
 					break;
 			}
@@ -329,21 +371,20 @@ public class GUI extends Application {
 		int x = Integer.parseInt(messageParts[2]);
 		int y = Integer.parseInt(messageParts[3]);
 		String direction = messageParts.length > 4 ? messageParts[4] : "up";
-
-
-		Player existingPlayer = getPlayerByName(playerName);
-		if (existingPlayer != null) {
-			existingPlayer.setXpos(x);
-			existingPlayer.setYpos(y);
-			existingPlayer.setDirection(direction);
-			updatePlayerOnGUI(existingPlayer);
+		System.out.println("Player " + playerName + " registered");
+		Player player = getPlayerByName(playerName);
+		if (player != null) {
+			player.setXpos(x);
+			player.setYpos(y);
+			player.setDirection(direction);
 		}
 		else {
 			// Player doesn't exist, create a new player and add it to the list
-			Player newPlayer = new Player(playerName, x, y, direction);
-			players.add(newPlayer);
-			updatePlayerOnGUI(newPlayer);
+			player = new Player(playerName, x, y, direction);
+			players.add(player);
 		}
+		updatePlayerOnGUI(player);
+		updateScoreList();
 	}
 
 	private void handleMoveMessage(String[] messageParts) {
@@ -353,6 +394,7 @@ public class GUI extends Application {
 		String direction = messageParts.length > 4 ? messageParts[4] : "up";
 		Player playerToUpdate = getPlayerByName(playerName);
 		if (playerToUpdate != null) {
+			//System.out.println("Player " + playerName + " moved to " + x + ", " + y + " in direction " + direction);
 			int oldX = playerToUpdate.getXpos();
 			int oldY = playerToUpdate.getYpos();
 
@@ -362,7 +404,45 @@ public class GUI extends Application {
 			playerToUpdate.setYpos(y);
 			playerToUpdate.setDirection(direction);
 			updatePlayerOnGUI(playerToUpdate);
+			updateScoreList();
 		}
+	}
+
+	private void handleDisconnectMessage(String[] messageParts) {
+		String playerName = messageParts[1];
+		Player playerToRemove = getPlayerByName(playerName);
+		if (playerToRemove != null) {
+			players.remove(playerToRemove);
+			int xpos = playerToRemove.getXpos();
+			int ypos = playerToRemove.getYpos();
+			fields[xpos][ypos].setGraphic(new ImageView(image_floor));
+			updateScoreList();
+		}
+	}
+
+	private void handlePointsMessage(String[] messageParts) {
+		String[] playerPoints = new String[messageParts.length - 1]; // -1 because the first element is "POINTS"
+		System.arraycopy(messageParts, 1, playerPoints, 0, playerPoints.length);
+		List<Player> playersToRemove = new ArrayList<>(players);
+		for (String playerPoint : playerPoints) {
+			String[] nameAndPoint = playerPoint.split(":");
+			String playerName = nameAndPoint[0];
+			int points = Integer.parseInt(nameAndPoint[1]);
+			Player playerToUpdate = getPlayerByName(playerName);
+			if (playerToUpdate != null) {
+				playerToUpdate.point = points;
+				playersToRemove.remove(playerToUpdate);
+			} else {
+				players.remove(playerToUpdate);
+				fields[playerToUpdate.getXpos()][playerToUpdate.getYpos()].setGraphic(new ImageView(image_floor));
+				System.out.println("Player " + playerName + " not found");
+			}
+		}
+		for (Player p : playersToRemove) {
+			players.remove(p);
+			fields[p.getXpos()][p.getYpos()].setGraphic(new ImageView(image_floor));
+		}
+		updateScoreList();
 	}
 
 	private Player getPlayerByName(String name) {
@@ -396,5 +476,22 @@ public class GUI extends Application {
 
 	private void cleanup() {
 		// Close connections and resources
+		sendMessageToServer("DISCONNECT," + me.getName());
+		try {
+			if (clientSocket != null) {
+				clientSocket.close();
+			}
+			if (outToServer != null) {
+				outToServer.close();
+			}
+			if (inFromServer != null) {
+				inFromServer.close();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		Platform.exit();
+		System.exit(0);
 	}
 }
